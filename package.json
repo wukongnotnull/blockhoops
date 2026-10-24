@@ -1,0 +1,13 @@
+{
+  "name": "block-hoops",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Interactive street-basketball diorama with an autonomous 4v4 full-court simulation",
+  "scripts": {
+    "test": "node --test 'tests/*.test.js'",
+    "coverage": "node --test --experimental-test-coverage --test-coverage-include='src/sim/**' 'tests/*.test.js'",
+    "serve": "node scripts/serve.mjs",
+    "build:artifact": "node scripts/build-artifact.mjs"
+  }
+}

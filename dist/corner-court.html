@@ -1,0 +1,226 @@
+<title>Block Hoops</title>
+  <meta name="description" content="A floating street-basketball diorama running an autonomous 4v4 full-court game to 11.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/styles.css">
+  <link rel="stylesheet" href="src/ui/panel.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+<canvas id="stage" aria-label="3D view of the Block Hoops diorama. Drag to orbit, scroll or pinch to zoom." data-i18n-aria="canvas.label"></canvas>
+
+  <header class="hud-top">
+    <section class="scoreboard" aria-label="Scoreboard" data-i18n-aria="hud.scoreboard">
+      <div class="team team-0" data-team="0">
+        <span class="team-dir" aria-hidden="true"></span>
+        <span class="team-name"></span>
+        <span class="team-poss" title="Possession" data-i18n-title="hud.possession" aria-hidden="true"></span>
+        <output class="team-score" aria-live="polite">0</output>
+      </div>
+      <div class="board-mid">
+        <span class="state-chip" id="state-chip">TIP-OFF</span>
+        <span class="target" id="target">FIRST TO 11</span>
+      </div>
+      <div class="team team-1" data-team="1">
+        <output class="team-score" aria-live="polite">0</output>
+        <span class="team-poss" title="Possession" data-i18n-title="hud.possession" aria-hidden="true"></span>
+        <span class="team-name"></span>
+        <span class="team-dir" aria-hidden="true"></span>
+      </div>
+    </section>
+    <p class="possession-line" id="possession-line" aria-live="polite"></p>
+  </header>
+
+  <div class="banner" id="banner" role="status" aria-live="assertive"></div>
+
+  <aside class="minimap" aria-label="Attack directions and player positions" data-i18n-aria="minimap.label">
+    <svg id="minimap" viewBox="-15.5 -15.5 31 31" role="img" aria-labelledby="minimap-title">
+      <title id="minimap-title" data-i18n="minimap.title">Mini court: each team's arrow points at the basket it attacks</title>
+      <g id="minimap-rot">
+        <rect x="-14" y="-7.5" width="28" height="15" rx="0.4" class="mm-court"/>
+        <line x1="0" y1="-7.5" x2="0" y2="7.5" class="mm-line"/>
+        <circle cx="0" cy="0" r="1.8" class="mm-line"/>
+        <path id="mm-arc-w" class="mm-line"/>
+        <path id="mm-arc-e" class="mm-line"/>
+        <circle cx="-12.425" cy="0" r="0.45" class="mm-hoop"/>
+        <circle cx="12.425" cy="0" r="0.45" class="mm-hoop"/>
+        <g id="mm-arrows"></g>
+        <g id="mm-dots"></g>
+      </g>
+    </svg>
+  </aside>
+
+  <footer class="hud-bottom">
+    <p class="series" id="series" aria-live="polite"></p>
+    <nav class="controls" aria-label="Quick controls" data-i18n-aria="quick.label">
+      <button type="button" id="btn-quick-pause" class="icon-btn" aria-pressed="false" aria-label="Pause" title="Pause (Space)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path class="i-pause" d="M7 5h3v14H7zM14 5h3v14h-3z"/><path class="i-play" d="M8 5l11 7-11 7z"/></svg>
+      </button>
+      <button type="button" id="btn-quick-sound" class="icon-btn" aria-pressed="false" aria-label="Turn sound on (M)" title="Turn sound on (M)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path class="i-speaker" d="M4 9h4l5-4v14l-5-4H4z"/><path class="i-waves" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/><path class="i-mute" d="M16 9l6 6M22 9l-6 6"/></svg>
+      </button>
+      <button type="button" id="btn-panel" class="primary panel-toggle" aria-expanded="false" aria-controls="panel">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+        <span data-i18n="panel.title">Controls</span>
+      </button>
+    </nav>
+  </footer>
+
+  <aside class="panel" id="panel" aria-labelledby="panel-title" hidden>
+    <header class="panel-head">
+      <h2 id="panel-title" data-i18n="panel.title">Controls</h2>
+      <button type="button" class="icon-btn" id="btn-panel-close" aria-label="Close controls (Esc)" data-i18n-aria="panel.close" data-i18n-title="panel.close" title="Close controls (Esc)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </header>
+    <div class="panel-body">
+      <div class="field lang-field">
+        <span class="field-label" id="lbl-lang" data-i18n="panel.lang">Language</span>
+        <div class="seg" role="radiogroup" aria-labelledby="lbl-lang" data-setting="lang">
+          <button type="button" role="radio" data-value="auto" data-i18n="lang.auto">Auto</button>
+          <button type="button" role="radio" data-value="zh" lang="zh" data-i18n="lang.zh">中文</button>
+          <button type="button" role="radio" data-value="en" lang="en" data-i18n="lang.en">English</button>
+        </div>
+      </div>
+      <section class="panel-sec" aria-labelledby="sec-play">
+        <h3 id="sec-play"><span class="sec-num">01</span><span data-i18n="sec.play">Playback</span></h3>
+        <div class="row-buttons">
+          <button type="button" id="btn-pause" aria-pressed="false">Pause</button>
+          <button type="button" id="btn-step" disabled title="Advance 0.1 s while paused (.)" data-i18n="play.step" data-i18n-title="play.stepTitle">Step ▸</button>
+          <button type="button" id="btn-restart" data-i18n="play.restart">Restart game</button>
+        </div>
+        <div class="field">
+          <span class="field-label" id="lbl-speed" data-i18n="play.speed">Speed</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-speed" data-setting="speed">
+            <button type="button" role="radio" data-value="0.5">0.5×</button>
+            <button type="button" role="radio" data-value="1">1×</button>
+            <button type="button" role="radio" data-value="2">2×</button>
+            <button type="button" role="radio" data-value="4">4×</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel-sec" aria-labelledby="sec-rules">
+        <h3 id="sec-rules"><span class="sec-num">02</span><span data-i18n="sec.rules">Rules</span></h3>
+        <div class="field">
+          <span class="field-label" id="lbl-win" data-i18n="rules.win">Points to win</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-win" data-setting="winScore">
+            <button type="button" role="radio" data-value="7">7</button>
+            <button type="button" role="radio" data-value="11">11</button>
+            <button type="button" role="radio" data-value="15">15</button>
+            <button type="button" role="radio" data-value="21">21</button>
+          </div>
+        </div>
+        <div class="field two">
+          <div>
+            <span class="field-label" id="lbl-in" data-i18n="rules.inside">Inside the arc</span>
+            <div class="seg" role="radiogroup" aria-labelledby="lbl-in" data-setting="insideValue">
+              <button type="button" role="radio" data-value="1">1</button>
+              <button type="button" role="radio" data-value="2">2</button>
+            </div>
+          </div>
+          <div>
+            <span class="field-label" id="lbl-out" data-i18n="rules.outside">Beyond the arc</span>
+            <div class="seg" role="radiogroup" aria-labelledby="lbl-out" data-setting="outsideValue">
+              <button type="button" role="radio" data-value="2">2</button>
+              <button type="button" role="radio" data-value="3">3</button>
+            </div>
+          </div>
+        </div>
+        <label class="switch"><input type="checkbox" id="chk-autorestart"><span data-i18n="rules.autoRestart">Start the next game automatically</span></label>
+        <p class="note" id="rules-note">Rule changes apply from the next game.</p>
+        <button type="button" id="btn-apply-rules" class="primary wide" data-i18n="rules.applyNow">Start a new game with these rules</button>
+      </section>
+
+      <section class="panel-sec" aria-labelledby="sec-ai">
+        <h3 id="sec-ai"><span class="sec-num">03</span><span data-i18n="sec.ai">Team AI</span></h3>
+        <div class="field">
+          <div class="field-head">
+            <span class="field-label" id="lbl-matchup" data-i18n="ai.presets">Matchup presets</span>
+            <button type="button" id="btn-swap" class="ghost small" title="Give each team the other's style" data-i18n="ai.swap" data-i18n-title="ai.swapTitle">⇄ Swap teams</button>
+          </div>
+          <div class="matchups" id="matchups" role="radiogroup" aria-labelledby="lbl-matchup"></div>
+          <p class="note" id="matchup-note" aria-live="polite"></p>
+        </div>
+        <div class="team-tabs" role="tablist" aria-label="Choose a team" data-i18n-aria="ai.pickTeam">
+          <button type="button" role="tab" id="tab-0" data-team="0" aria-selected="true" aria-controls="tuning">SPARKS</button>
+          <button type="button" role="tab" id="tab-1" data-team="1" aria-selected="false" aria-controls="tuning">TIDES</button>
+        </div>
+        <div id="tuning" role="tabpanel" class="tuning">
+          <label class="slider"><span data-i18n="tune.shooting">Shooting</span><input type="range" min="0.25" max="2" step="0.05" data-tune="shooting"><output></output></label>
+          <label class="slider"><span data-i18n="tune.passing">Passing</span><input type="range" min="0.25" max="2" step="0.05" data-tune="passing"><output></output></label>
+          <label class="slider"><span data-i18n="tune.defense">Defense</span><input type="range" min="0.25" max="2" step="0.05" data-tune="defense"><output></output></label>
+          <label class="slider"><span data-i18n="tune.accuracy">Accuracy</span><input type="range" min="0.25" max="2" step="0.05" data-tune="accuracy"><output></output></label>
+          <button type="button" id="btn-tune-reset" class="ghost" data-i18n="ai.reset">Reset to default</button>
+        </div>
+      </section>
+
+      <section class="panel-sec" aria-labelledby="sec-view">
+        <h3 id="sec-view"><span class="sec-num">04</span><span data-i18n="sec.view">Camera &amp; visuals</span></h3>
+        <div class="field">
+          <span class="field-label" id="lbl-view" data-i18n="view.camera">Camera</span>
+          <div class="seg seg-wrap" role="radiogroup" aria-labelledby="lbl-view" data-setting="view">
+            <button type="button" role="radio" data-value="auto" data-i18n="view.auto">Auto</button>
+            <button type="button" role="radio" data-value="side" data-i18n="view.side">Side</button>
+            <button type="button" role="radio" data-value="baseline" data-i18n="view.baseline">Baseline</button>
+            <button type="button" role="radio" data-value="top" data-i18n="view.top">Top</button>
+            <button type="button" role="radio" data-value="follow" data-i18n="view.follow">Follow</button>
+          </div>
+        </div>
+        <label class="switch"><input type="checkbox" id="chk-rotate"><span data-i18n="view.rotate">Auto-rotate</span></label>
+        <label class="switch"><input type="checkbox" id="chk-minimap"><span data-i18n="view.minimap">Mini-map</span></label>
+        <label class="switch"><input type="checkbox" id="chk-shadows"><span data-i18n="view.shadows">Shadows</span></label>
+        <label class="switch"><input type="checkbox" id="chk-effects"><span data-i18n="view.effects">Fireflies and ball trail</span></label>
+      </section>
+      <section class="panel-sec" aria-labelledby="sec-env">
+        <h3 id="sec-env"><span class="sec-num">05</span><span data-i18n="sec.env">Time &amp; weather</span></h3>
+        <div class="field">
+          <span class="field-label" id="lbl-time" data-i18n="env.time">Time of day</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-time" data-setting="time">
+            <button type="button" role="radio" data-value="day" data-i18n="time.day">Day</button>
+            <button type="button" role="radio" data-value="dusk" data-i18n="time.dusk">Dusk</button>
+            <button type="button" role="radio" data-value="night" data-i18n="time.night">Night</button>
+          </div>
+        </div>
+        <div class="field">
+          <span class="field-label" id="lbl-weather" data-i18n="env.weather">Weather</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-weather" data-setting="weather">
+            <button type="button" role="radio" data-value="clear" data-i18n="weather.clear">Clear</button>
+            <button type="button" role="radio" data-value="drizzle" data-i18n="weather.drizzle">Drizzle</button>
+            <button type="button" role="radio" data-value="downpour" data-i18n="weather.downpour">Downpour</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel-sec" aria-labelledby="sec-sound">
+        <h3 id="sec-sound"><span class="sec-num">06</span><span data-i18n="sec.sound">Sound</span></h3>
+        <label class="switch"><input type="checkbox" id="chk-sound"><span data-i18n="sound.toggle">Sound effects (dribbles, rim, swish, whistle, cheers, rain)</span></label>
+        <label class="slider slider-volume"><span data-i18n="sound.volume">Volume</span><input type="range" id="rng-volume" min="0" max="1" step="0.05"><output id="out-volume"></output></label>
+      </section>
+      <p class="kbd-hint"><kbd>Space</kbd> <span data-i18n="kbd.pause">pause</span> · <kbd>.</kbd> <span data-i18n="kbd.step">step</span> · <kbd>M</kbd> <span data-i18n="kbd.sound">sound</span> · <kbd>Esc</kbd> <span data-i18n="kbd.close">close</span></p>
+    </div>
+  </aside>
+
+  <dialog class="gameover" id="gameover" aria-labelledby="go-title">
+    <p class="go-kicker" data-i18n="go.final">FINAL</p>
+    <h2 id="go-title"></h2>
+    <p class="go-score" id="go-score"></p>
+    <table class="box" id="go-box">
+      <caption data-i18n="go.box">Box score</caption>
+      <thead><tr><th scope="col"><span class="visually-hidden" data-i18n="go.stat">Stat</span></th><th scope="col" class="t0">SPK</th><th scope="col" class="t1">TDS</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="go-next" id="go-next"></p>
+    <button type="button" id="btn-again" class="primary" data-i18n="go.again">Run it again</button>
+  </dialog>
+
+  <noscript><p class="fallback">Block Hoops needs JavaScript and WebGL. Block Hoops 需要 JavaScript 和 WebGL。</p></noscript>
+  <p class="fallback" id="webgl-error" data-i18n="fallback.webgl" hidden>Couldn't start WebGL on this device. Try another browser.</p>
+
+  <script type="module" src="src/main.js"></script>
